@@ -9,7 +9,8 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const DATA = path.join(__dirname, "storage", "data.json");
 const UPLOADS = path.join(__dirname, "storage", "designs");
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "admin@cncmarketplace.local";
+fs.mkdirSync(path.dirname(DATA), { recursive: true });
+fs.mkdirSync(UPLOADS, { recursive: true });const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "admin@cncmarketplace.local";
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "ChangeMe123!";
 
 if (!fs.existsSync(DATA)) {
