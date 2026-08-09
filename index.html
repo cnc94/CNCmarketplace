@@ -1,0 +1,18 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CNCmarketplace</title>
+<style>
+body{margin:0;background:#08090a;color:#eee;font:15px Arial}header{padding:20px 6%;border-bottom:1px solid #282828;display:flex;justify-content:space-between}.brand{font-size:24px;font-weight:900}.brand b{color:#d6a85f}.wrap{padding:50px 6%}.hero{padding:80px 6%;background:radial-gradient(circle at 80%,#3a2915,transparent 35%)}h1{font-size:70px;max-width:700px;margin:0 0 20px}.muted{color:#999}.btn{background:#d6a85f;border:0;padding:12px 18px;border-radius:4px;font-weight:bold;cursor:pointer}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}.card{background:#121416;border:1px solid #282a2c;border-radius:7px;overflow:hidden}.pic{height:190px;display:grid;place-items:center;background:radial-gradient(circle,#55401f,#111)}.pic:before{content:"CNC";font-size:50px;color:#d6a85f22;border:2px solid #d6a85f;width:100px;height:100px;display:grid;place-items:center;transform:rotate(45deg)}.body{padding:16px}.price{color:#e1bc78;font-weight:bold}.modal{position:fixed;inset:0;background:#000c;display:none;place-items:center}.modal.show{display:grid}.box{background:#151719;padding:25px;border:1px solid #333;width:min(420px,88%)}input{display:block;width:100%;padding:12px;margin:9px 0 15px;background:#090a0b;color:white;border:1px solid #333;box-sizing:border-box}
+@media(max-width:800px){.grid{grid-template-columns:repeat(2,1fr)}h1{font-size:52px}}@media(max-width:500px){.grid{grid-template-columns:1fr}}
+</style></head>
+<body>
+<header><div class="brand">CNC<b>marketplace</b></div><div><button class="btn" onclick="login()">Sign in</button> <a href="/admin" style="color:#aaa;margin-left:10px">Admin</a></div></header>
+<section class="hero"><p class="muted">PRECISION DIGITAL CRAFT</p><h1>Design it. Cut it. Make it real.</h1><p class="muted">A marketplace for CNC-ready 2D and 3D files.</p></section>
+<section class="wrap"><h2>Latest designs</h2><div id="grid" class="grid"></div></section>
+<div id="modal" class="modal"><div class="box"><button style="float:right" onclick="closeM()">×</button><h2>Sign in</h2><input id="email" placeholder="Email"><input id="pass" type="password" placeholder="Password"><button class="btn" onclick="doLogin()">Sign in</button><p id="msg" class="muted"></p></div></div>
+<script>
+async function load(){let r=await fetch('/api/products'),ps=await r.json();document.getElementById('grid').innerHTML=ps.map(p=>`<div class="card"><div class="pic"></div><div class="body"><small class="muted">${p.format} · ${p.category}</small><h3>${p.name}</h3><div class="price">${p.premium?'$'+p.price:'FREE'}</div><button class="btn" style="margin-top:14px" onclick="download('${p.id}')">${p.premium?'Buy / Download':'Download'}</button></div></div>`).join('')||'<p class="muted">No designs yet. Add one from Admin.</p>'}
+async function download(id){let r=await fetch('/api/download/'+id);if(r.status===401){login();return}if(r.status===402){alert('Premium payment is not connected yet.');return}if(!r.ok){alert('Download unavailable');return}let b=await r.blob(),u=URL.createObjectURL(b),a=document.createElement('a');a.href=u;a.download='cnc-design';a.click();URL.revokeObjectURL(u)}
+function login(){document.getElementById('modal').classList.add('show')}function closeM(){document.getElementById('modal').classList.remove('show')}
+async function doLogin(){let r=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email.value,password:pass.value})});let j=await r.json();document.getElementById('msg').textContent=j.error||'Logged in';if(r.ok)setTimeout(closeM,500)}
+load();
+</script></body></html>
