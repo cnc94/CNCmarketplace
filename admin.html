@@ -3,11 +3,18 @@
 <body><div class="wrap"><h1>CNCmarketplace Admin</h1><p class="muted">Upload and manage your CNC design library.</p>
 <div id="loginBox" class="box"><h2>Admin login</h2><input id="ae" placeholder="Admin email"><input id="ap" type="password" placeholder="Admin password"><button class="btn" onclick="adminLogin()">Login</button><p id="err"></p></div>
 <div id="panel" style="display:none"><div id="stats" class="stats"></div>
-<div class="box"><h2>Upload design</h2><form id="form"><input name="name" placeholder="Design name" required><textarea name="description" placeholder="Description"></textarea><input name="category" placeholder="Category"><input name="format" placeholder="DXF / STL / CDR"><input name="price" type="number" step="0.01" placeholder="Price"><label><input name="premium" type="checkbox" value="true" style="width:auto"> Premium</label><input name="file" type="file" required><button class="btn">Upload</button></form><p id="uploadMsg"></p></div>
+<div class="box"><h2>Upload design</h2><form id="form"><input name="name" placeholder="Design name" required><textarea name="description" placeholder="Description"></textarea><input name="category" placeholder="Category"><input name="format" placeholder="DXF / STL / CDR"><input name="price" type="number" step="0.01" placeholder="Price"><label><input name="premium" type="checkbox" value="true" style="width:auto"> Premium</label><label>Design Preview Image (JPG / PNG / WEBP)
+<input name="image" type="file" accept="image/jpeg,image/png,image/webp">
+</label>
+<label>CNC File (DXF / STL / CDR)
+<input name="file" type="file" required>
+</label><button class="btn">Upload</button></form><p id="uploadMsg"></p></div>
 <div class="box"><h2>Design library</h2><div id="list"></div></div></div></div>
 <script>
 async function adminLogin(){let r=await fetch('/api/admin/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:ae.value,password:ap.value})});if(r.ok){loginBox.style.display='none';panel.style.display='block';refresh()}else err.textContent=(await r.json()).error}
-async function refresh(){let s=await (await fetch('/api/admin/stats')).json();stats.innerHTML=Object.entries(s).map(([k,v])=>`<div class="stat"><b>${v}</b><br><span class="muted">${k}</span></div>`).join('');let ps=await (await fetch('/api/admin/products')).json();list.innerHTML=ps.map(p=>`<div style="padding:12px 0;border-bottom:1px solid #292b2d"><b>${p.name}</b> — ${p.format} — ${p.premium?'Premium':'Free'} <button class="danger" onclick="del('${p.id}')">Delete</button></div>`).join('')||'<p class="muted">No designs.</p>'}
+async function refresh(){let s=await (await fetch('/api/admin/stats')).json();stats.innerHTML=Object.entries(s).map(([k,v])=>`<div class="stat"><b>${v}</b><br><span class="muted">${k}</span></div>`).join('');let ps=await (await fetch('/api/admin/products')).json();list.innerHTML=ps.map(p=>`<div style="padding:12px 0;border-bottom:1px solid #292b2d">
+${p.imageUrl?`<img src="${p.imageUrl}" style="width:90px;height:70px;object-fit:cover;border-radius:5px;vertical-align:middle;margin-right:10px">`:''}
+<b>${p.name}</b> — ${p.format} — ${p.premium?'Premium':'Free'} <button class="danger" onclick="del('${p.id}')">Delete</button></div>`).join('')||'<p class="muted">No designs.</p>'}
 form.onsubmit=async e=>{e.preventDefault();let r=await fetch('/api/admin/products',{method:'POST',body:new FormData(form)});let j=await r.json();uploadMsg.textContent=j.error||'Uploaded successfully';if(r.ok){form.reset();refresh()}}
 async function del(id){if(!confirm('Delete this design?'))return;await fetch('/api/admin/products/'+id,{method:'DELETE'});refresh()}
 </script></body></html>

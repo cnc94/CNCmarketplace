@@ -9,8 +9,10 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const DATA = path.join(__dirname, "storage", "data.json");
 const UPLOADS = path.join(__dirname, "storage", "designs");
+const IMAGES = path.join(__dirname, "storage", "images");
 fs.mkdirSync(path.dirname(DATA), { recursive: true });
-fs.mkdirSync(UPLOADS, { recursive: true });const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "admin@cncmarketplace.local";
+fs.mkdirSync(UPLOADS, { recursive: true });
+fs.mkdirSync(IMAGES, { recursive: true });const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "admin@cncmarketplace.local";
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "ChangeMe123!";
 
 if (!fs.existsSync(DATA)) {
@@ -28,12 +30,28 @@ app.use(session({
   cookie:{httpOnly:true, sameSite:"lax", maxAge:1000*60*60*24*7}
 }));
 app.use(express.static(__dirname));
+app.use("/uploads/images", express.static(IMAGES));
 
-const storage = multer.diskStorage({
+const designStorage = multer.diskStorage({
   destination: (_,__,cb)=>cb(null, UPLOADS),
   filename: (_,file,cb)=>cb(null, Date.now()+"-"+crypto.randomBytes(5).toString("hex")+"-"+file.originalname.replace(/[^a-zA-Z0-9._-]/g,"_"))
 });
-const upload = multer({storage, limits:{fileSize:200*1024*1024}});
+const imageStorage = multer.diskStorage({
+  destination: (_,__,cb)=>cb(null, IMAGES),
+  filename: (_,file,cb)=>{
+    const ext = path.extname(file.originalname).toLowerCase();
+    cb(null, Date.now()+"-"+crypto.randomBytes(5).toString("hex")+ext);
+  }
+});
+const upload = multer({storage:designStorage, limits:{fileSize:200*1024*1024}});
+const imageUpload = multer({
+  storage:imageStorage,
+  limits:{fileSize:10*1024*1024},
+  fileFilter: (_,file,cb)=>{
+    const ok=["image/jpeg","image/png","image/webp"].includes(file.mimetype);
+    cb(ok ? null : new Error("Preview image must be JPG, PNG or WEBP"), ok);
+  }
+});
 
 function auth(req,res,next){ if(!req.session.user) return res.status(401).json({error:"Login required"}); next(); }
 function admin(req,res,next){ if(!req.session.admin) return res.status(403).json({error:"Admin access required"}); next(); }
@@ -96,7 +114,12 @@ app.get("/api/admin/stats",admin,(req,res)=>{
   res.json({users:d.users.length,products:d.products.length,downloads:d.downloads.length,premium:d.products.filter(p=>p.premium).length});
 });
 
-app.post("/api/admin/products",admin,upload.single("file"),(req,res)=>{
+app.post("/api/admin/products",admin,(req,res)=>{
+  imageUpload.single("image")(req,res,(imageErr)=>{
+    if(imageErr) return res.status(400).json({error:imageErr.message});
+    req.imageFile = req.file;
+    upload.single("file")(req,res,(fileErr)=>{
+      if(fileErr) return res.status(400).json({error:fileErr.message});
   const {name,description,category,format,price,premium}=req.body;
   if(!name || !req.file) return res.status(400).json({error:"Name and design file are required"});
   const d=db();
@@ -107,14 +130,22 @@ app.post("/api/admin/products",admin,upload.single("file"),(req,res)=>{
     file:req.file.path,originalName:req.file.originalname,
     size:req.file.size,createdAt:new Date().toISOString()
   };
+  product.imageUrl = req.imageFile ? `/uploads/images/${req.imageFile.filename}` : null;
   d.products.unshift(product); save(d);
   const {file,...safe}=product; res.json(safe);
+      });
+    });
 });
 
 app.delete("/api/admin/products/:id",admin,(req,res)=>{
   const d=db(), i=d.products.findIndex(x=>x.id===req.params.id);
   if(i<0) return res.status(404).json({error:"Not found"});
-  const p=d.products[i]; if(p.file && fs.existsSync(p.file)) fs.unlinkSync(p.file);
+  const p=d.products[i];
+  if(p.file && fs.existsSync(p.file)) fs.unlinkSync(p.file);
+  if(p.imageUrl){
+    const imagePath=path.join(__dirname,p.imageUrl.replace(/^\//,""));
+    if(fs.existsSync(imagePath)) fs.unlinkSync(imagePath);
+  }
   d.products.splice(i,1); save(d); res.json({ok:true});
 });
 
