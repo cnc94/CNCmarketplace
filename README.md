@@ -44,7 +44,3 @@ For production, move file storage/database to managed services and use HTTPS.
 5. Deploy.
 
 Render gives the service a public `onrender.com` URL. Free web services can spin down after 15 minutes of inactivity and local filesystem changes are not persistent across redeploys/restarts, so this package is suitable for a prototype/test. For a real marketplace with permanent uploaded CNC files, we should next move uploads to persistent object storage and the JSON data to a managed database. Render documents these free-tier limitations here: https://render.com/docs/free
-
-
-## v2 image previews
-Admin can upload an optional JPG/PNG/WEBP preview image together with each DXF/STL/CDR file. The image appears on the storefront and admin library.
