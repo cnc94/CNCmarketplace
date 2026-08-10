@@ -114,27 +114,25 @@ app.get("/api/admin/stats",admin,(req,res)=>{
   res.json({users:d.users.length,products:d.products.length,downloads:d.downloads.length,premium:d.products.filter(p=>p.premium).length});
 });
 
-app.post("/api/admin/products",admin,(req,res)=>{
-  imageUpload.single("image")(req,res,(imageErr)=>{
-    if(imageErr) return res.status(400).json({error:imageErr.message});
-    req.imageFile = req.file;
-    upload.single("file")(req,res,(fileErr)=>{
-      if(fileErr) return res.status(400).json({error:fileErr.message});
+app.post("/api/admin/products", admin, upload.fields([
+  {name:"image", maxCount:1},
+  {name:"file", maxCount:1}
+]), (req,res)=>{
+  const imageFile = req.files && req.files.image ? req.files.image[0] : null;
+  const designFile = req.files && req.files.file ? req.files.file[0] : null;
   const {name,description,category,format,price,premium}=req.body;
-  if(!name || !req.file) return res.status(400).json({error:"Name and design file are required"});
+  if(!name || !designFile) return res.status(400).json({error:"Name and design file are required"});
   const d=db();
   const product={
     id:id(),name,description:description||"",category:category||"Other",
-    format:format||path.extname(req.file.originalname).slice(1).toUpperCase(),
+    format:format||path.extname(designFile.originalname).slice(1).toUpperCase(),
     price:Number(price||0),premium:premium==="true",
-    file:req.file.path,originalName:req.file.originalname,
-    size:req.file.size,createdAt:new Date().toISOString()
+    file:designFile.path,originalName:designFile.originalname,
+    size:designFile.size,createdAt:new Date().toISOString(),
+    imageUrl:imageFile ? `/uploads/images/${imageFile.filename}` : null
   };
-  product.imageUrl = req.imageFile ? `/uploads/images/${req.imageFile.filename}` : null;
   d.products.unshift(product); save(d);
   const {file,...safe}=product; res.json(safe);
-      });
-    });
 });
 
 app.delete("/api/admin/products/:id",admin,(req,res)=>{
@@ -152,5 +150,11 @@ app.delete("/api/admin/products/:id",admin,(req,res)=>{
 app.get("/api/admin/products",admin,(req,res)=>res.json(db().products.map(({file,...p})=>p)));
 
 app.get("/admin",(req,res)=>res.sendFile(path.join(__dirname,"admin.html")));
+
+app.use((err,req,res,next)=>{
+  if(err && err.code && err.code.startsWith("LIMIT")) return res.status(400).json({error:err.message});
+  if(err && err.message) return res.status(400).json({error:err.message});
+  next(err);
+});
 
 app.listen(PORT,()=>console.log(`CNCmarketplace running at http://localhost:${PORT}`));
