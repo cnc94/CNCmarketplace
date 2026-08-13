@@ -1,60 +1,17 @@
-<!doctype html>
-<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>CNCmarketplace Admin</title>
-<style>
-body{margin:0;background:#090a0b;color:#eee;font:15px Arial}.wrap{max-width:1000px;margin:auto;padding:30px 18px}
-.box{background:#121416;border:1px solid #2b2d30;padding:22px;margin:15px 0;border-radius:10px}
-input,textarea,select{width:100%;box-sizing:border-box;background:#08090a;color:#eee;border:1px solid #333;padding:11px;margin:7px 0 14px;border-radius:5px}
-.btn{background:#d6a85f;border:0;padding:11px 17px;font-weight:bold;border-radius:5px;cursor:pointer}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
-.stat{padding:20px;background:#181a1c;border-radius:8px}.danger{background:#642b2b;color:white;border:0;padding:8px;border-radius:4px}.muted{color:#999}
-.preview{width:100px;height:70px;object-fit:cover;border-radius:6px;border:1px solid #333;vertical-align:middle;margin-right:10px}
-#drop{border:1px dashed #555;padding:14px;border-radius:7px;margin-bottom:12px}
-@media(max-width:600px){.stats{grid-template-columns:repeat(2,1fr)}}
-</style></head>
-<body><div class="wrap">
-<h1>CNCmarketplace Admin</h1><p class="muted">Upload and manage your CNC design library.</p>
-<div id="loginBox" class="box"><h2>Admin login</h2><input id="ae" placeholder="Admin email"><input id="ap" type="password" placeholder="Admin password"><button class="btn" onclick="adminLogin()">Login</button><p id="err"></p></div>
-<div id="panel" style="display:none">
-<div id="stats" class="stats"></div>
-<div class="box"><h2>Upload design</h2>
-<form id="form">
-<input name="name" placeholder="Design name" required>
-<textarea name="description" placeholder="Description"></textarea>
-<input name="category" placeholder="Category">
-<input name="format" placeholder="DXF / STL / CDR">
-<input name="price" type="number" step="0.01" placeholder="Price">
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CNCmarketplace Admin</title>
+<style>body{margin:0;background:#090a0b;color:#eee;font:15px Arial}.wrap{max-width:1000px;margin:auto;padding:25px 16px}.box{background:#121416;border:1px solid #2b2d30;padding:20px;margin:15px 0;border-radius:10px}input,textarea{width:100%;box-sizing:border-box;background:#08090a;color:#eee;border:1px solid #333;padding:11px;margin:7px 0 14px;border-radius:5px}.btn{background:#d6a85f;border:0;padding:11px 17px;border-radius:5px;font-weight:bold}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.stat{background:#181a1c;padding:18px;border-radius:8px}.pic{width:110px;height:75px;object-fit:cover;vertical-align:middle;border-radius:6px;margin-right:10px;border:1px solid #444}.muted{color:#999}@media(max-width:600px){.stats{grid-template-columns:repeat(2,1fr)}}</style></head>
+<body><div class="wrap"><h1>CNCmarketplace Admin</h1><p class="muted">Upload and manage your CNC design library.</p>
+<div id="login" class="box"><h2>Admin login</h2><input id="email" type="email" placeholder="Admin email"><input id="pass" type="password" placeholder="Admin password"><button class="btn" onclick="loginAdmin()">Login</button><p id="loginMsg"></p></div>
+<div id="app" style="display:none"><div id="stats" class="stats"></div><div class="box"><h2>Upload design</h2>
+<form id="f" enctype="multipart/form-data">
+<input name="name" placeholder="Design name" required><textarea name="description" placeholder="Description"></textarea><input name="category" placeholder="Category"><input name="format" placeholder="DXF / STL / CDR"><input name="price" type="number" step="0.01" value="0">
 <label><input name="premium" type="checkbox" value="true" style="width:auto"> Premium</label>
-<label>Design preview photo (JPG / PNG / WEBP)</label>
-<input name="image" type="file" accept="image/jpeg,image/png,image/webp">
-<label>CNC design file (DXF / STL / CDR)</label>
-<input name="file" type="file" accept=".dxf,.stl,.cdr" required>
-<button class="btn">Upload design</button>
-</form><p id="uploadMsg"></p></div>
-<div class="box"><h2>Design library</h2><div id="list"></div></div>
-</div></div>
+<p><b>🖼️ Design Preview Photo</b></p><input name="image" type="file" accept="image/jpeg,image/png,image/webp" required>
+<p><b>📁 CNC File</b></p><input name="file" type="file" accept=".dxf,.stl,.cdr" required>
+<button class="btn" type="submit">Upload</button></form><p id="msg"></p></div>
+<div class="box"><h2>Design library</h2><div id="list"></div></div></div></div>
 <script>
-async function adminLogin(){
-  let r=await fetch('/api/admin/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:ae.value,password:ap.value})});
-  if(r.ok){loginBox.style.display='none';panel.style.display='block';refresh()}
-  else err.textContent=(await r.json()).error
-}
-async function refresh(){
-  let s=await (await fetch('/api/admin/stats')).json();
-  stats.innerHTML=Object.entries(s).map(([k,v])=>`<div class="stat"><b>${v}</b><br><span class="muted">${k}</span></div>`).join('');
-  let ps=await (await fetch('/api/admin/products')).json();
-  list.innerHTML=ps.map(p=>`<div style="padding:12px 0;border-bottom:1px solid #292b2d">
-  ${p.imageUrl?`<img class="preview" src="${p.imageUrl}" alt="">`:'<span class="preview" style="display:inline-grid;place-items:center">No image</span>'}
-  <b>${esc(p.name)}</b> — ${esc(p.format)} — ${p.premium?'Premium':'Free'}
-  <button class="danger" onclick="del('${p.id}')">Delete</button></div>`).join('')||'<p class="muted">No designs.</p>'
-}
-function esc(s){return String(s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
-form.onsubmit=async e=>{
-  e.preventDefault();
-  uploadMsg.textContent='Uploading...';
-  let r=await fetch('/api/admin/products',{method:'POST',body:new FormData(form)});
-  let j=await r.json();
-  uploadMsg.textContent=j.error||'Uploaded successfully';
-  if(r.ok){form.reset();refresh()}
-}
-async function del(id){if(!confirm('Delete this design?'))return;await fetch('/api/admin/products/'+id,{method:'DELETE'});refresh()}
+async function loginAdmin(){let r=await fetch("/api/admin/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:email.value,password:pass.value})});let j=await r.json();if(r.ok){login.style.display="none";app.style.display="block";refresh()}else loginMsg.textContent=j.error}
+async function refresh(){let s=await(await fetch("/api/admin/stats")).json();stats.innerHTML=Object.entries(s).map(([k,v])=>`<div class="stat"><b>${v}</b><br>${k}</div>`).join("");let p=await(await fetch("/api/admin/products")).json();list.innerHTML=p.map(x=>`<div style="padding:12px 0;border-bottom:1px solid #292b2d">${x.imageUrl?`<img class="pic" src="${x.imageUrl}">`:"No image"} <b>${x.name}</b> — ${x.format}</div>`).join("")||"No designs."}
+f.onsubmit=async e=>{e.preventDefault();msg.textContent="Uploading...";let r=await fetch("/api/admin/products",{method:"POST",body:new FormData(f)});let j=await r.json();msg.textContent=r.ok?"✅ Photo + CNC file uploaded successfully.":"❌ "+j.error;if(r.ok){f.reset();refresh()}};
 </script></body></html>

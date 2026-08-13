@@ -1,0 +1,3 @@
+Replace server.js, admin.html and index.html with these files, commit, then deploy latest commit on Render.
+The preview photo and CNC file MUST be selected in the same Upload form.
+Render Free has ephemeral storage: uploaded files can disappear after restart/redeploy/spin-down. For permanent uploads, use external object storage or a paid Render service with a persistent disk.
